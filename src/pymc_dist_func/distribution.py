@@ -12,9 +12,10 @@ from pymc.distributions.shape_utils import (
     convert_shape,
     convert_size,
     find_size,
+    shape_from_dims,
 )
 from pymc.logprob.transforms import Transform
-from pymc.model.core import _UnsetType
+from pymc.model.core import _UnsetType, Model
 from pymc.util import UNSET
 from pytensor.graph.basic import Variable
 from pytensor.graph.utils import MetaType
@@ -69,8 +70,8 @@ def dist(
 
 
 class NormalDistribution:
+    @staticmethod
     def dist(
-        self,
         mu: ArrayLike | TensorVariable,
         sigma: ArrayLike | TensorVariable,
         dims: Dims | None = None,
@@ -96,6 +97,8 @@ class NormalDistribution:
         default_transform: Transform | _UnsetType = UNSET,
     ):
         "This is the distribution function"
+        shape = determine_shape(size, shape, dims, observed)
+
         rv_out = self.dist(mu=mu, sigma=sigma, dims=dims, size=size, shape=shape)
         add_dist(
             rv_out=rv_out,
@@ -110,6 +113,26 @@ class NormalDistribution:
         return rv_out
 
 
+def determine_shape(
+    size: Size | None = None,
+    shape: Shape | None = None,
+    dims: Dims | None = None,
+    observed: ndarray | Variable | None = None,
+):
+    """Determine the shape of the random variable.
+
+    Preference is given to size or shape. If not specified, we rely on dims and
+    finally, observed, to determine the shape of the variable.
+    """
+    if size is None and shape is None:
+        if dims is not None:
+            model = Model.get_context()
+            shape = shape_from_dims(dims, model)
+        elif observed is not None:
+            shape = tuple(observed.shape)
+    return shape
+
+
 Normal = NormalDistribution()
 
 
@@ -119,6 +142,7 @@ with pm.Model() as model:
     trace = pm.sample()
     print(trace.posterior.Foo.mean())  # should be close to 2
     print(trace.posterior.Foo.std())  # should be close to 2
+
 # Testing the Normal.dist method
 bar = Normal.dist(mu=2, sigma=1)
 print(bar)
