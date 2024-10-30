@@ -1,1 +1,1 @@
-from .distribution import Normal as Normal
+from .normal import Normal as Normal
