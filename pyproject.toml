@@ -1,0 +1,19 @@
+[project]
+name = "pymc-dist-func"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pymc>=5.17.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pylsp-rope>=0.1.16",
+    "ruff>=0.7.1",
+]
