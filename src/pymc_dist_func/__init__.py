@@ -1,2 +1,1 @@
-def hello() -> str:
-    return "Hello from pymc-dist-func!"
+from .distribution import Normal as Normal
