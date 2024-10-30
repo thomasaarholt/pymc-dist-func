@@ -12,11 +12,11 @@ from pymc.distributions.shape_utils import (
     convert_shape,
     convert_size,
     find_size,
-    shape_from_dims,
 )
 from pymc.logprob.transforms import Transform
-from pymc.model.core import _UnsetType, Model
+from pymc.model.core import _UnsetType
 from pymc.util import UNSET
+from pymc_dist_func.shape_utils import determine_shape
 from pytensor.graph.basic import Variable
 from pytensor.graph.utils import MetaType
 from pytensor.tensor.variable import TensorVariable
@@ -96,7 +96,71 @@ class NormalDistribution:
         transform: Transform | _UnsetType = UNSET,
         default_transform: Transform | _UnsetType = UNSET,
     ):
-        "This is the distribution function"
+        r"""
+        Univariate normal log-likelihood.
+
+        The pdf of this distribution is
+
+        .. math::
+
+           f(x \mid \mu, \tau) =
+               \sqrt{\frac{\tau}{2\pi}}
+               \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
+
+        Normal distribution can be parameterized either in terms of precision
+        or standard deviation. The link between the two parametrizations is
+        given by
+
+        .. math::
+
+           \tau = \dfrac{1}{\sigma^2}
+
+        .. plot::
+            :context: close-figs
+
+            import matplotlib.pyplot as plt
+            import numpy as np
+            import scipy.stats as st
+            import arviz as az
+            plt.style.use('arviz-darkgrid')
+            x = np.linspace(-5, 5, 1000)
+            mus = [0., 0., 0., -2.]
+            sigmas = [0.4, 1., 2., 0.4]
+            for mu, sigma in zip(mus, sigmas):
+                pdf = st.norm.pdf(x, mu, sigma)
+                plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sigma))
+            plt.xlabel('x', fontsize=12)
+            plt.ylabel('f(x)', fontsize=12)
+            plt.legend(loc=1)
+            plt.show()
+
+        ========  ==========================================
+        Support   :math:`x \in \mathbb{R}`
+        Mean      :math:`\mu`
+        Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
+        ========  ==========================================
+
+        Parameters
+        ----------
+        mu : tensor_like of float, default 0
+            Mean.
+        sigma : tensor_like of float, optional
+            Standard deviation (sigma > 0) (only required if tau is not specified).
+            Defaults to 1 if neither sigma nor tau is specified.
+        tau : tensor_like of float, optional
+            Precision (tau > 0) (only required if sigma is not specified).
+
+        Examples
+        --------
+        .. code-block:: python
+
+            with pm.Model():
+                x = pm.Normal("x", mu=0, sigma=10)
+
+            with pm.Model():
+                x = pm.Normal("x", mu=0, tau=1 / 23)
+        """
+
         shape = determine_shape(size, shape, dims, observed)
 
         rv_out = self.dist(mu=mu, sigma=sigma, dims=dims, size=size, shape=shape)
@@ -111,26 +175,6 @@ class NormalDistribution:
             default_transform=default_transform,
         )
         return rv_out
-
-
-def determine_shape(
-    size: Size | None = None,
-    shape: Shape | None = None,
-    dims: Dims | None = None,
-    observed: ndarray | Variable | None = None,
-):
-    """Determine the shape of the random variable.
-
-    Preference is given to size or shape. If not specified, we rely on dims and
-    finally, observed, to determine the shape of the variable.
-    """
-    if size is None and shape is None:
-        if dims is not None:
-            model = Model.get_context()
-            shape = shape_from_dims(dims, model)
-        elif observed is not None:
-            shape = tuple(observed.shape)
-    return shape
 
 
 Normal = NormalDistribution()
